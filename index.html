@@ -65,126 +65,88 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbzhndEZKAElPYCR3ccvO5UuwhH-mJEiKlZER28O93ACe5sXw1gNVpM1ADPfySCLGWy9Tg/exec';
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbzhndEZKAElPYCR3ccvO5UuwhH-mJEiKlZER28O93ACe5sXw1gNVpM1ADPfySCLGWy9Tg/exec";
 
-const container = document.getElementById('events');
+const container = document.getElementById("events");
 
-function formatTime(isoString) {
-  if (!isoString) return '';
+function formatTime(iso) {
+  if (!iso) return "";
 
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: 'numeric',
-    minute: '2-digit'
-  }).format(new Date(isoString));
-}
-
-function formatEventTime(time) {
-  if (!time || !time.starts_at || !time.ends_at) {
-    return '';
-  }
-
-  return `${formatTime(time.starts_at)} – ${formatTime(time.ends_at)}`;
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function renderEvents(events) {
-  const now = Date.now();
-
-  const activeEvents = (events || []).filter(event => {
-    return (event.kiosk_times || []).some(time => {
-      return time.ends_at &&
-        new Date(time.ends_at).getTime() > now;
-    });
-  });
-
-  const displayEvents = activeEvents.slice(0, 5);
-
-  container.className =
-    `events events-count-${Math.min(displayEvents.length, 5)}`;
-
-  if (displayEvents.length === 0) {
+  if (!events || events.length === 0) {
+    container.className = "events count-0";
     container.innerHTML = `
-      <div style="
-        padding: 40px;
-        font-size: 24px;
-        color: #aaa;
-      ">
+      <div class="empty">
         No kiosk events right now.
       </div>
     `;
     return;
   }
 
-  container.innerHTML = displayEvents.map(event => {
-    const activeTimes = (event.kiosk_times || []).filter(time => {
-      return time.ends_at &&
-        new Date(time.ends_at).getTime() > now;
-    });
+  const count = Math.min(events.length, 5);
 
-    const timesHtml = activeTimes.map(time => `
-      <div class="meta-row">
-        <span class="icon">◷</span>
-        <span>${formatEventTime(time)}</span>
-      </div>
-    `).join('');
+  container.className = "events count-" + count;
 
-    return `
+  container.innerHTML = events
+    .slice(0, 5)
+    .map(e => `
       <article class="event">
-        <div class="event-name">${event.name || ''}</div>
+        <div class="event-name">${e.name || ""}</div>
 
         <div class="meta">
-          ${timesHtml}
+          <div class="meta-row">
+            <span class="icon">◷</span>
+            <span>
+              ${formatTime(e.starts_at)}
+              ${e.ends_at ? " – " + formatTime(e.ends_at) : ""}
+            </span>
+          </div>
 
-          ${event.location ? `
-            <div class="meta-row location">
-              <span class="icon">⌖</span>
-              <span>${event.location}</span>
-            </div>
-          ` : ''}
+          ${
+            e.location
+              ? `
+                <div class="meta-row location">
+                  <span class="icon">⌖</span>
+                  <span>${e.location}</span>
+                </div>
+              `
+              : ""
+          }
         </div>
       </article>
-    `;
-  }).join('');
+    `)
+    .join("");
 }
 
 async function loadEvents() {
   try {
-    console.log('Loading calendar from:', API_URL);
-
-    const response = await fetch(
-      API_URL + '?t=' + Date.now(),
-      {
-        cache: 'no-store'
-      }
-    );
-
-    console.log('API response status:', response.status);
+    const response = await fetch(API_URL, {
+      cache: "no-store"
+    });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error("API request failed");
     }
 
     const data = await response.json();
 
-    console.log('API data:', data);
-
-    if (data.error) {
-      throw new Error(data.message || 'API returned an error');
-    }
-
     renderEvents(data.events || []);
 
   } catch (error) {
-    console.error('Calendar API error:', error);
+    console.error("Calendar API error:", error);
+
+    container.className = "events count-0";
 
     container.innerHTML = `
-      <div style="
-        padding: 40px;
-        font-size: 22px;
-        color: #ff7777;
-      ">
-        Calendar connection error.<br><br>
-        ${error.message}
+      <div class="empty">
+        Unable to load events.
       </div>
     `;
   }
@@ -192,5 +154,9 @@ async function loadEvents() {
 
 loadEvents();
 
+/*
+ * Refresh every minute so events disappear
+ * automatically after their end time.
+ */
 setInterval(loadEvents, 60 * 1000);
 </script>
