@@ -149,19 +149,44 @@ function loadEvents() {
     "planningCenterCallback_" + Date.now();
 
 
-  window[callbackName] = function(data) {
+window[callbackName] = function(data) {
 
-    try {
+  try {
 
-      if (
-        !data ||
-        !data.events
-      ) {
-        renderEvents([]);
-        return;
-      }
+    console.log("Planning Center data:", data);
 
-      renderEvents(data.events);
+    if (!data) {
+      renderEvents([]);
+      return;
+    }
+
+    if (data.error) {
+      console.error("Planning Center API error:", data);
+      renderEvents([]);
+      return;
+    }
+
+    if (!Array.isArray(data.events)) {
+      console.error("No events array found:", data);
+      renderEvents([]);
+      return;
+    }
+
+    renderEvents(data.events);
+
+  } catch (error) {
+
+    console.error("Calendar data error:", error);
+
+    container.className = "events count-0";
+
+    container.innerHTML = `
+      <div class="empty">
+        Unable to display events.
+      </div>
+    `;
+
+  } finally {
 
     } catch (error) {
 
