@@ -97,6 +97,17 @@ function formatTime(iso) {
     minute: "2-digit"
   });
 }
+  function updateClock() {
+  const clock = document.getElementById("clock");
+
+  clock.textContent = new Date().toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+updateClock();
+setInterval(updateClock, 1000);
 
 function renderEvents(events) {
 
