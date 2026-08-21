@@ -139,57 +139,62 @@ function loadEvents() {
   const callbackName =
     "planningCenterCallback_" + Date.now();
 
-  window[callbackName] = function(data) {
+window[callbackName] = function(data) {
 
-    try {
+  try {
 
-      if (
-        !data ||
-        !data.attributes ||
-        !data.attributes.event_times
-      ) {
-        renderEvents([]);
-        return;
+    if (!data || !data.event_instance_id) {
+      renderEvents([]);
+      return;
+    }
+
+    const now = new Date();
+
+    const event = {
+      name: data.name || "",
+      starts_at: data.starts_at || null,
+      ends_at: data.ends_at || null,
+      location: data.location || ""
+    };
+
+    // Use the Planning Center event times when available.
+    const eventTimes = data.event_times || [];
+
+    const kioskTimes = eventTimes
+      .filter(time => {
+
+        if (time.visible_on_kiosks !== true) {
+          return false;
+        }
+
+        if (!time.ends_at) {
+          return true;
+        }
+
+        return new Date(time.ends_at) > now;
+      })
+      .map(time => {
+
+        return {
+          name: event.name || time.name || "",
+          starts_at: time.starts_at || event.starts_at,
+          ends_at: time.ends_at || event.ends_at,
+          location: event.location || ""
+        };
+
+      });
+
+    // If Planning Center did not return a kiosk time,
+    // fall back to the event itself.
+    if (kioskTimes.length === 0) {
+      if (!event.ends_at || new Date(event.ends_at) > now) {
+        kioskTimes.push(event);
       }
+    }
 
-      const now = new Date();
+    renderEvents(kioskTimes);
 
-      const event = data.attributes;
-
-      const eventTimes =
-        event.event_times.data || [];
-
-      const kioskTimes = eventTimes
-        .filter(timeItem => {
-
-          const time = timeItem.attributes || {};
-
-          if (time.visible_on_kiosks !== true) {
-            return false;
-          }
-
-          if (!time.ends_at) {
-            return true;
-          }
-
-          return new Date(time.ends_at) > now;
-        })
-        .map(timeItem => {
-
-          const time = timeItem.attributes || {};
-
-          return {
-            name: event.name || time.name || "",
-            starts_at: time.starts_at || null,
-            ends_at: time.ends_at || null,
-            location: event.location || ""
-          };
-
-        });
-
-      renderEvents(kioskTimes);
-
-    } finally {
+  } finally {
 
       delete window[callbackName];
 
