@@ -65,57 +65,115 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);
 </div>
 
 <script>
-/*
-  Temporary sample data.
-  Later, this array will be replaced with Planning Center data automatically.
-  The display order is:
-    EVENT NAME → optional subtitle → TIME → LOCATION
-*/
-const events = [
-  {
-    name: "Renew 45",
-    subtitle: "Bonfire Night",
-    start: "6:00 PM",
-    end: "8:00 PM",
-    location: "Fire Pit · Upper Field"
-  },
-  {
-    name: "Middle School Youth Group",
-    subtitle: "Weekly Gathering",
-    start: "7:00 PM",
-    end: "8:30 PM",
-    location: "Youth Room"
-  },
-  {
-    name: "Worship Team Practice",
-    subtitle: "Rehearsal",
-    start: "8:00 PM",
-    end: "9:30 PM",
-    location: "Worship Center"
+const API_URL = 'https://script.google.com/macros/s/AKfycbzhndEZKAElPYCR3ccvO5UuwhH-mJEiKlZER28O93ACe5sXw1gNVpM1ADPfySCLGWy9Tg/exec';
+
+const container = document.getElementById('events');
+
+function formatTime(isoString) {
+  if (!isoString) return '';
+
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date(isoString));
+}
+
+function formatEventTime(time) {
+  if (!time || !time.starts_at || !time.ends_at) {
+    return '';
   }
-];
 
-const container = document.getElementById("events");
-const count = Math.min(events.length, 5);
-container.className = "events count-" + count;
+  return `${formatTime(time.starts_at)} – ${formatTime(time.ends_at)}`;
+}
 
-container.innerHTML = events.slice(0,5).map(e => `
-  <article class="event">
-    <div class="event-name">${e.name}</div>
-    ${e.subtitle ? `<div class="event-sub">${e.subtitle}</div>` : ""}
-    <div class="meta">
+function renderEvents(events) {
+  const now = Date.now();
+
+  /*
+   * Only display events that still have at least one
+   * kiosk-visible time that has not ended.
+   */
+  const activeEvents = (events || []).filter(event => {
+    return (event.kiosk_times || []).some(time => {
+      return time.ends_at &&
+             new Date(time.ends_at).getTime() > now;
+    });
+  });
+
+  const displayEvents = activeEvents.slice(0, 5);
+
+  container.className = `events events-count-${Math.min(displayEvents.length, 5)}`;
+
+  if (displayEvents.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = displayEvents.map(event => {
+    const activeTimes = (event.kiosk_times || []).filter(time => {
+      return time.ends_at &&
+             new Date(time.ends_at).getTime() > now;
+    });
+
+    const timesHtml = activeTimes.map(time => `
       <div class="meta-row">
         <span class="icon">◷</span>
-        <span>${e.start}${e.end ? " - " + e.end : ""}</span>
+        <span>${formatEventTime(time)}</span>
       </div>
-      ${e.location ? `
-      <div class="meta-row location">
-        <span class="icon">⌖</span>
-        <span>${e.location}</span>
-      </div>` : ""}
-    </div>
-  </article>
-`).join("");
+    `).join('');
+
+    return `
+      <article class="event">
+        <div class="event-name">${event.name || ''}</div>
+
+        <div class="meta">
+          ${timesHtml}
+
+          ${event.location ? `
+            <div class="meta-row location">
+              <span class="icon">⌖</span>
+              <span>${event.location}</span>
+            </div>
+          ` : ''}
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+async function loadEvents() {
+  try {
+    const response = await fetch(API_URL + '?t=' + Date.now(), {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.message || 'API error');
+    }
+
+    renderEvents(data.events || []);
+
+  } catch (error) {
+    console.error('Unable to load calendar events:', error);
+    container.innerHTML = '';
+  }
+}
+
+/*
+ * Load immediately.
+ */
+loadEvents();
+
+/*
+ * Refresh every minute so events disappear shortly after
+ * their kiosk time ends and newly-added events appear.
+ */
+setInterval(loadEvents, 60 * 1000);
 </script>
-</body>
-</html>
