@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Renew Bible Church — OptiSigns Calendar Prototype</title>
+<style>
+  :root{
+    --teal:#18c6cf;
+    --bg:#0b0c0c;
+    --panel:#171919;
+    --card:#242727;
+    --muted:#a7abad;
+    --line:#3b3f3f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);
+    font-family:Arial,Helvetica,sans-serif;color:#fff}
+  .screen{width:100vw;height:100vh;display:grid;grid-template-columns:66.7% 33.3%;grid-template-rows:74.1% 25.9%}
+  .promo{position:relative;overflow:hidden;background:#111}
+  .promo img{width:100%;height:100%;object-fit:cover;display:block}
+  .events{position:relative;background:var(--panel);padding:4.2vh 2.1vw 3vh;border-top:7px solid var(--teal)}
+  .eyebrow{font-size:1.35vw;font-weight:700;letter-spacing:.12em;color:var(--teal);margin-bottom:.7vh}
+  .date{font-size:3.1vw;font-weight:800;line-height:1.0}
+  .weekday{font-size:1.25vw;color:var(--muted);margin-top:.8vh}
+  .event-card{margin-top:7vh;background:var(--card);border:1px solid var(--line);border-radius:1.35vw;padding:2.3vw}
+  .event-kicker{font-size:1.15vw;font-weight:800;letter-spacing:.11em;color:var(--teal)}
+  .time{font-size:3.2vw;font-weight:800;margin:.8vh 0 2vh}
+  .event-name{font-size:2.15vw;font-weight:800;line-height:1.1}
+  .event-sub{font-size:1.7vw;margin-top:.4vh}
+  .location-label{font-size:.95vw;font-weight:800;letter-spacing:.11em;color:var(--muted);margin-top:5vh}
+  .location{font-size:1.35vw;margin-top:.5vh}
+  .divider{height:1px;background:var(--line);margin:4vh 0 2.3vh}
+  .note{font-size:1.15vw;color:#d9dddd}
+  .footer{grid-column:1/3;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:0 2vw}
+  .weather{display:flex;align-items:baseline;gap:1vw}
+  .temp{font-size:3vw;font-weight:800}
+  .weather-text{font-size:1.05vw;color:var(--muted);letter-spacing:.08em}
+  .site{font-size:2vw;font-weight:800}
+</style>
+</head>
+<body>
+<div class="screen">
+  <section class="promo"><img src="renew-promo.jpg" alt="Renew at the Ridge promotional graphic"></section>
+  <aside class="events">
+    <div class="eyebrow">TODAY</div>
+    <div class="date">AUGUST 21</div>
+    <div class="weekday">Friday</div>
+    <div class="event-card">
+      <div class="event-kicker">TONIGHT</div>
+      <div class="time">6:00 PM</div>
+      <div class="event-name">Renew 45</div>
+      <div class="event-sub">Bonfire Night</div>
+      <div class="location-label">LOCATION</div>
+      <div class="location">Fire Pit · Upper Field</div>
+      <div class="divider"></div>
+      <div class="note">See you there!</div>
+    </div>
+  </aside>
+  <footer class="footer">
+    <div class="weather"><span class="temp">66°</span><span class="weather-text">CLEAR SKY</span></div>
+    <div class="site">renewbiblechurch.org</div>
+  </footer>
+</div>
+</body>
+</html>
