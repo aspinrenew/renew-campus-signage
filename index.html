@@ -70,6 +70,7 @@ const API_URL =
 
 const container = document.getElementById("events");
 
+
 function formatTime(iso) {
   if (!iso) return "";
 
@@ -79,8 +80,11 @@ function formatTime(iso) {
   });
 }
 
+
 function renderEvents(events) {
+
   if (!events || events.length === 0) {
+
     container.className = "events count-0";
 
     container.innerHTML = `
@@ -109,18 +113,23 @@ function renderEvents(events) {
 
           <div class="meta-row">
             <span class="icon">◷</span>
+
             <span>
               ${formatTime(e.starts_at)}
               ${e.ends_at ? " – " + formatTime(e.ends_at) : ""}
             </span>
+
           </div>
 
           ${
             e.location
               ? `
                 <div class="meta-row location">
+
                   <span class="icon">⌖</span>
+
                   <span>${e.location}</span>
+
                 </div>
               `
               : ""
@@ -139,62 +148,34 @@ function loadEvents() {
   const callbackName =
     "planningCenterCallback_" + Date.now();
 
-window[callbackName] = function(data) {
 
-  try {
+  window[callbackName] = function(data) {
 
-    if (!data || !data.event_instance_id) {
-      renderEvents([]);
-      return;
-    }
+    try {
 
-    const now = new Date();
-
-    const event = {
-      name: data.name || "",
-      starts_at: data.starts_at || null,
-      ends_at: data.ends_at || null,
-      location: data.location || ""
-    };
-
-    // Use the Planning Center event times when available.
-    const eventTimes = data.event_times || [];
-
-    const kioskTimes = eventTimes
-      .filter(time => {
-
-        if (time.visible_on_kiosks !== true) {
-          return false;
-        }
-
-        if (!time.ends_at) {
-          return true;
-        }
-
-        return new Date(time.ends_at) > now;
-      })
-      .map(time => {
-
-        return {
-          name: event.name || time.name || "",
-          starts_at: time.starts_at || event.starts_at,
-          ends_at: time.ends_at || event.ends_at,
-          location: event.location || ""
-        };
-
-      });
-
-    // If Planning Center did not return a kiosk time,
-    // fall back to the event itself.
-    if (kioskTimes.length === 0) {
-      if (!event.ends_at || new Date(event.ends_at) > now) {
-        kioskTimes.push(event);
+      if (
+        !data ||
+        !data.events
+      ) {
+        renderEvents([]);
+        return;
       }
-    }
 
-    renderEvents(kioskTimes);
+      renderEvents(data.events);
 
-  } finally {
+    } catch (error) {
+
+      console.error("Calendar data error:", error);
+
+      container.className = "events count-0";
+
+      container.innerHTML = `
+        <div class="empty">
+          Unable to display events.
+        </div>
+      `;
+
+    } finally {
 
       delete window[callbackName];
 
@@ -206,18 +187,29 @@ window[callbackName] = function(data) {
       }
 
     }
+
   };
 
 
   const script =
     document.createElement("script");
 
+
   script.id = callbackName;
+
+
+  /*
+   * Ask the Google Apps Script for JSONP.
+   *
+   * IMPORTANT:
+   * Do not use encodeURIComponent here.
+   */
 
   script.src =
     API_URL +
     "?callback=" +
-    encodeURIComponent(callbackName);
+    callbackName;
+
 
   script.onerror = function() {
 
@@ -232,19 +224,27 @@ window[callbackName] = function(data) {
         Unable to load events.
       </div>
     `;
+
   };
 
+
   document.body.appendChild(script);
+
 }
 
+
+/* Load events immediately. */
 
 loadEvents();
 
 
 /*
  * Refresh every minute.
- * This makes an event disappear automatically
+ *
+ * This means an event disappears automatically
  * after its end time.
  */
+
 setInterval(loadEvents, 60 * 1000);
+
 </script>
