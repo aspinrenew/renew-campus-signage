@@ -82,11 +82,13 @@ function formatTime(iso) {
 function renderEvents(events) {
   if (!events || events.length === 0) {
     container.className = "events count-0";
+
     container.innerHTML = `
       <div class="empty">
         No kiosk events right now.
       </div>
     `;
+
     return;
   }
 
@@ -98,9 +100,13 @@ function renderEvents(events) {
     .slice(0, 5)
     .map(e => `
       <article class="event">
-        <div class="event-name">${e.name || ""}</div>
+
+        <div class="event-name">
+          ${e.name || ""}
+        </div>
 
         <div class="meta">
+
           <div class="meta-row">
             <span class="icon">◷</span>
             <span>
@@ -119,28 +125,100 @@ function renderEvents(events) {
               `
               : ""
           }
+
         </div>
+
       </article>
     `)
     .join("");
 }
 
-async function loadEvents() {
-  try {
-    const response = await fetch(API_URL, {
-      cache: "no-store"
-    });
 
-    if (!response.ok) {
-      throw new Error("API request failed");
+function loadEvents() {
+
+  const callbackName =
+    "planningCenterCallback_" + Date.now();
+
+  window[callbackName] = function(data) {
+
+    try {
+
+      if (
+        !data ||
+        !data.attributes ||
+        !data.attributes.event_times
+      ) {
+        renderEvents([]);
+        return;
+      }
+
+      const now = new Date();
+
+      const event = data.attributes;
+
+      const eventTimes =
+        event.event_times.data || [];
+
+      const kioskTimes = eventTimes
+        .filter(timeItem => {
+
+          const time = timeItem.attributes || {};
+
+          if (time.visible_on_kiosks !== true) {
+            return false;
+          }
+
+          if (!time.ends_at) {
+            return true;
+          }
+
+          return new Date(time.ends_at) > now;
+        })
+        .map(timeItem => {
+
+          const time = timeItem.attributes || {};
+
+          return {
+            name: event.name || time.name || "",
+            starts_at: time.starts_at || null,
+            ends_at: time.ends_at || null,
+            location: event.location || ""
+          };
+
+        });
+
+      renderEvents(kioskTimes);
+
+    } finally {
+
+      delete window[callbackName];
+
+      const script =
+        document.getElementById(callbackName);
+
+      if (script) {
+        script.remove();
+      }
+
     }
+  };
 
-    const data = await response.json();
 
-    renderEvents(data.events || []);
+  const script =
+    document.createElement("script");
 
-  } catch (error) {
-    console.error("Calendar API error:", error);
+  script.id = callbackName;
+
+  script.src =
+    API_URL +
+    "?callback=" +
+    encodeURIComponent(callbackName);
+
+  script.onerror = function() {
+
+    delete window[callbackName];
+
+    script.remove();
 
     container.className = "events count-0";
 
@@ -149,14 +227,19 @@ async function loadEvents() {
         Unable to load events.
       </div>
     `;
-  }
+  };
+
+  document.body.appendChild(script);
 }
+
 
 loadEvents();
 
+
 /*
- * Refresh every minute so events disappear
- * automatically after their end time.
+ * Refresh every minute.
+ * This makes an event disappear automatically
+ * after its end time.
  */
 setInterval(loadEvents, 60 * 1000);
 </script>
