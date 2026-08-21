@@ -90,30 +90,35 @@ function formatEventTime(time) {
 function renderEvents(events) {
   const now = Date.now();
 
-  /*
-   * Only display events that still have at least one
-   * kiosk-visible time that has not ended.
-   */
   const activeEvents = (events || []).filter(event => {
     return (event.kiosk_times || []).some(time => {
       return time.ends_at &&
-             new Date(time.ends_at).getTime() > now;
+        new Date(time.ends_at).getTime() > now;
     });
   });
 
   const displayEvents = activeEvents.slice(0, 5);
 
-  container.className = `events events-count-${Math.min(displayEvents.length, 5)}`;
+  container.className =
+    `events events-count-${Math.min(displayEvents.length, 5)}`;
 
   if (displayEvents.length === 0) {
-    container.innerHTML = '';
+    container.innerHTML = `
+      <div style="
+        padding: 40px;
+        font-size: 24px;
+        color: #aaa;
+      ">
+        No kiosk events right now.
+      </div>
+    `;
     return;
   }
 
   container.innerHTML = displayEvents.map(event => {
     const activeTimes = (event.kiosk_times || []).filter(time => {
       return time.ends_at &&
-             new Date(time.ends_at).getTime() > now;
+        new Date(time.ends_at).getTime() > now;
     });
 
     const timesHtml = activeTimes.map(time => `
@@ -144,9 +149,16 @@ function renderEvents(events) {
 
 async function loadEvents() {
   try {
-    const response = await fetch(API_URL + '?t=' + Date.now(), {
-      cache: 'no-store'
-    });
+    console.log('Loading calendar from:', API_URL);
+
+    const response = await fetch(
+      API_URL + '?t=' + Date.now(),
+      {
+        cache: 'no-store'
+      }
+    );
+
+    console.log('API response status:', response.status);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -154,26 +166,31 @@ async function loadEvents() {
 
     const data = await response.json();
 
+    console.log('API data:', data);
+
     if (data.error) {
-      throw new Error(data.message || 'API error');
+      throw new Error(data.message || 'API returned an error');
     }
 
     renderEvents(data.events || []);
 
   } catch (error) {
-    console.error('Unable to load calendar events:', error);
-    container.innerHTML = '';
+    console.error('Calendar API error:', error);
+
+    container.innerHTML = `
+      <div style="
+        padding: 40px;
+        font-size: 22px;
+        color: #ff7777;
+      ">
+        Calendar connection error.<br><br>
+        ${error.message}
+      </div>
+    `;
   }
 }
 
-/*
- * Load immediately.
- */
 loadEvents();
 
-/*
- * Refresh every minute so events disappear shortly after
- * their kiosk time ends and newly-added events appear.
- */
 setInterval(loadEvents, 60 * 1000);
 </script>
