@@ -63,13 +63,11 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);
 
   <main class="events" id="events"></main>
 </div>
-
 <script>
 const API_URL =
   "https://script.google.com/macros/s/AKfycbzhndEZKAElPYCR3ccvO5UuwhH-mJEiKlZER28O93ACe5sXw1gNVpM1ADPfySCLGWy9Tg/exec";
 
 const container = document.getElementById("events");
-
 
 function formatTime(iso) {
   if (!iso) return "";
@@ -80,11 +78,9 @@ function formatTime(iso) {
   });
 }
 
-
 function renderEvents(events) {
 
   if (!events || events.length === 0) {
-
     container.className = "events count-0";
 
     container.innerHTML = `
@@ -125,11 +121,8 @@ function renderEvents(events) {
             e.location
               ? `
                 <div class="meta-row location">
-
                   <span class="icon">⌖</span>
-
                   <span>${e.location}</span>
-
                 </div>
               `
               : ""
@@ -142,51 +135,41 @@ function renderEvents(events) {
     .join("");
 }
 
-
 function loadEvents() {
 
   const callbackName =
     "planningCenterCallback_" + Date.now();
 
+  window[callbackName] = function(data) {
 
-window[callbackName] = function(data) {
+    try {
 
-  try {
+      console.log("Planning Center data:", data);
 
-    console.log("Planning Center data:", data);
+      if (!data || data.error || !Array.isArray(data.events)) {
+        renderEvents([]);
+        return;
+      }
 
-    if (!data) {
-      renderEvents([]);
-      return;
-    }
+      const now = new Date();
 
-    if (data.error) {
-      console.error("Planning Center API error:", data);
-      renderEvents([]);
-      return;
-    }
+      /*
+       * Only show events that have not ended yet.
+       *
+       * The Apps Script is already returning today's
+       * public events, so we only need to remove events
+       * whose end time has passed.
+       */
+      const activeEvents = data.events.filter(event => {
 
-    if (!Array.isArray(data.events)) {
-      console.error("No events array found:", data);
-      renderEvents([]);
-      return;
-    }
+        if (!event.ends_at) {
+          return true;
+        }
 
-    renderEvents(data.events);
+        return new Date(event.ends_at) > now;
+      });
 
-  } catch (error) {
-
-    console.error("Calendar data error:", error);
-
-    container.className = "events count-0";
-
-    container.innerHTML = `
-      <div class="empty">
-        Unable to display events.
-      </div>
-    `;
-
-  } finally {
+      renderEvents(activeEvents);
 
     } catch (error) {
 
@@ -204,37 +187,25 @@ window[callbackName] = function(data) {
 
       delete window[callbackName];
 
-      const script =
+      const oldScript =
         document.getElementById(callbackName);
 
-      if (script) {
-        script.remove();
+      if (oldScript) {
+        oldScript.remove();
       }
 
     }
-
   };
-
 
   const script =
     document.createElement("script");
 
-
   script.id = callbackName;
-
-
-  /*
-   * Ask the Google Apps Script for JSONP.
-   *
-   * IMPORTANT:
-   * Do not use encodeURIComponent here.
-   */
 
   script.src =
     API_URL +
     "?callback=" +
     callbackName;
-
 
   script.onerror = function() {
 
@@ -249,27 +220,19 @@ window[callbackName] = function(data) {
         Unable to load events.
       </div>
     `;
-
   };
 
-
   document.body.appendChild(script);
-
 }
 
-
 /* Load events immediately. */
-
 loadEvents();
 
-
 /*
- * Refresh every minute.
+ * Check every minute.
  *
- * This means an event disappears automatically
+ * This causes an event to disappear within one minute
  * after its end time.
  */
-
 setInterval(loadEvents, 60 * 1000);
-
 </script>
