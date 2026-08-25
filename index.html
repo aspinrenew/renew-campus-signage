@@ -82,8 +82,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);
     <div class="clock" id="clock"></div>
   </div>
 
-  <div class="date">AUGUST 21</div>
-  <div class="weekday">Friday</div>
+  <div class="date" id="date"></div>
+<div class="weekday" id="weekday"></div>
 </header>
 
   <main class="events" id="events"></main>
@@ -111,6 +111,26 @@ function formatTime(iso) {
   });
 }
 
+  function updateDate() {
+  const now = new Date();
+
+  document.getElementById("date").textContent =
+    now.toLocaleDateString([], {
+      month: "long",
+      day: "numeric"
+    }).toUpperCase();
+
+  document.getElementById("weekday").textContent =
+    now.toLocaleDateString([], {
+      weekday: "long"
+    });
+}
+
+updateDate();
+
+// Keep the date correct if the kiosk stays open overnight.
+setInterval(updateDate, 60 * 1000);
+  
 updateClock();
 setInterval(updateClock, 1000);
 
